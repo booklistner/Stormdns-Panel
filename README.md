@@ -1,6 +1,6 @@
 # ⚡ StormDNS Panel
 
-پنل مدیریت ساده و زیبا برای سرور StormDNS
+پنل مدیریت ساده برای سرور StormDNS
 
 ## امکانات
 
@@ -15,13 +15,13 @@
 ## نصب سریع
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/YOUR_USERNAME/stormdns-panel/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/booklistner/stormdns-panel/main/install.sh)
 ```
 
 ## حذف
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/YOUR_USERNAME/stormdns-panel/main/install.sh) --uninstall
+bash <(curl -Ls https://raw.githubusercontent.com/booklistner/stormdns-panel/main/install.sh) --uninstall
 ```
 
 ## پیش‌نیاز
