@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StormDNS Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#070b14;--surface:#0d1525;--surface2:#111827;--surface3:#1a2438;
+  --border:rgba(255,255,255,0.06);--text:#e2e8f0;--muted:rgba(255,255,255,0.38);
+  --blue:#3b82f6;--green:#10b981;--red:#ef4444;--orange:#f59e0b;--cyan:#06b6d4;--purple:#8b5cf6;
+}
+body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
+
+/* Sidebar */
+.sidebar{
+  width:220px;min-height:100vh;background:var(--surface);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:fixed;right:0;top:0;bottom:0;z-index:100;
+}
+.sidebar-logo{
+  padding:20px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sidebar-logo .icon{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,#3b82f6,#06b6d4);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.sidebar-logo span{font-weight:700;font-size:15px;background:linear-gradient(135deg,#3b82f6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.nav{flex:1;padding:12px 10px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:8px;
+  color:var(--muted);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all 0.15s;margin-bottom:2px;
+  border:none;background:none;width:100%;text-align:right;font-family:'Vazirmatn',sans-serif;
+}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.04);}
+.nav-item.active{color:#fff;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.15);}
+.nav-item .nav-icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-footer{padding:14px 10px;border-top:1px solid var(--border);}
+.btn-logout{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:8px;
+  color:var(--muted);font-size:12px;cursor:pointer;
+  background:none;border:none;font-family:'Vazirmatn',sans-serif;
+  transition:color 0.15s;width:100%;
+}
+.btn-logout:hover{color:var(--red);}
+
+/* Main */
+.main{margin-right:220px;flex:1;min-width:0;}
+.header{
+  padding:14px 24px;border-bottom:1px solid var(--border);
+  background:var(--surface);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+}
+.header-title{font-size:15px;font-weight:600;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.server-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500;
+}
+.server-badge.active{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:var(--green);}
+.server-badge.inactive{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:var(--red);}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.content{padding:22px 24px;}
+
+/* Tab Pages */
+.page{display:none;}
+.page.active{display:block;}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:18px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.stat-top{display:flex;align-items:center;justify-content:space-between;}
+.stat-label{font-size:12px;color:var(--muted);}
+.stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.stat-icon.blue{background:rgba(59,130,246,0.12);}
+.stat-icon.green{background:rgba(16,185,129,0.12);}
+.stat-icon.red{background:rgba(239,68,68,0.12);}
+.stat-icon.orange{background:rgba(245,158,11,0.12);}
+.stat-icon.cyan{background:rgba(6,182,212,0.12);}
+.stat-icon.purple{background:rgba(139,92,246,0.12);}
+.stat-value{font-size:24px;font-weight:700;line-height:1;}
+.stat-sub{font-size:11px;color:var(--muted);}
+
+/* Progress bar */
+.progress{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;margin-top:4px;}
+.progress-fill{height:100%;border-radius:2px;transition:width 0.5s;}
+
+/* Charts */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:22px;}
+.chart-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:18px;
+}
+.chart-title{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);}
+.chart-container{position:relative;height:140px;}
+
+/* Section */
+.section{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:18px;}
+.section-header{
+  padding:15px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.section-title{font-size:14px;font-weight:600;}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:18px;align-items:end;}
+.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;}
+.field input,.field select{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:8px 12px;
+  color:var(--text);font-size:13px;font-family:'Vazirmatn',sans-serif;
+  outline:none;transition:border-color 0.2s;
+}
+.field input:focus,.field select:focus{border-color:rgba(59,130,246,0.4);}
+.field select option{background:#1a2438;}
+
+/* Buttons */
+.btn{border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-family:'Vazirmatn',sans-serif;font-weight:600;cursor:pointer;transition:all 0.15s;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:#2563eb;}
+.btn-success{background:var(--green);color:#fff;}
+.btn-danger{background:transparent;border:1px solid rgba(239,68,68,0.25);color:var(--red);}
+.btn-danger:hover{background:rgba(239,68,68,0.08);}
+.btn-warning{background:transparent;border:1px solid rgba(245,158,11,0.25);color:var(--orange);}
+.btn-warning:hover{background:rgba(245,158,11,0.08);}
+.btn-info{background:transparent;border:1px solid rgba(6,182,212,0.25);color:var(--cyan);}
+.btn-info:hover{background:rgba(6,182,212,0.08);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+
+/* Table */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{padding:10px 14px;text-align:right;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+td{padding:12px 14px;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.025);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+.actions{display:flex;gap:5px;flex-wrap:wrap;}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600;}
+.badge-active{background:rgba(16,185,129,0.1);color:var(--green);border:1px solid rgba(16,185,129,0.2);}
+.badge-inactive{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2);}
+
+/* Vol bar */
+.vol-bar{width:70px;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:4px;}
+.vol-fill{height:100%;border-radius:2px;background:var(--blue);}
+
+/* Empty */
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+
+/* Server config */
+.config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:18px;}
+.config-item label{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-bottom:6px;}
+.config-item label span{color:var(--cyan);font-size:10px;}
+.config-item input,.config-item select{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:8px 12px;
+  color:var(--text);font-size:13px;font-family:'Vazirmatn',sans-serif;outline:none;
+  transition:border-color 0.2s;
+}
+.config-item input:focus{border-color:rgba(59,130,246,0.4);}
+.config-actions{padding:0 18px 18px;display:flex;gap:10px;}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.overlay.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;width:90%;max-width:400px;position:relative;}
+.modal h3{font-size:15px;margin-bottom:18px;}
+.modal-close{position:absolute;top:14px;left:18px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+.qr-img{text-align:center;}
+.qr-img img{border-radius:10px;max-width:190px;border:4px solid #fff;}
+.code-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;font-family:monospace;color:var(--cyan);line-height:1.9;margin-top:12px;word-break:break-all;direction:ltr;text-align:left;}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:12px;transition:transform 0.3s;z-index:9999;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(16,185,129,0.3);color:var(--green);}
+.toast.err{border-color:rgba(239,68,68,0.3);color:var(--red);}
+
+/* Settings */
+.settings-section{padding:20px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border-bottom:none;}
+.settings-label h4{font-size:13px;font-weight:500;}
+.settings-label p{font-size:11px;color:var(--muted);margin-top:3px;}
+.settings-input{display:flex;gap:8px;align-items:center;}
+.settings-input input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;font-family:'Vazirmatn',sans-serif;outline:none;width:180px;}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="icon">⚡</div>
+    <span>StormDNS</span>
+  </div>
+  <nav class="nav">
+    <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span>داشبورد</button>
+    <button class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span>کاربران</button>
+    <button class="nav-item" onclick="showPage('server',this)"><span class="nav-icon">⚙️</span>تنظیمات سرور</button>
+    <button class="nav-item" onclick="showPage('settings',this)"><span class="nav-icon">🔒</span>امنیت پنل</button>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="btn-logout" onclick="location.href='/logout'">🚪 خروج از پنل</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="header">
+    <div class="header-title" id="pageTitle">داشبورد</div>
+    <div class="header-right">
+      <div class="server-badge" id="serverBadge">
+        <div class="dot"></div><span>بررسی...</span>
+      </div>
+      <button class="btn btn-warning btn-sm" onclick="restartServer()">🔄 ری‌استارت</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- PAGE: Dashboard -->
+    <div class="page active" id="page-dashboard">
+
+      <!-- Stat cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-label">CPU</div>
+            <div class="stat-icon blue">🖥️</div>
+          </div>
+          <div class="stat-value" id="cpuVal">-</div>
+          <div class="progress"><div class="progress-fill" id="cpuBar" style="background:var(--blue);width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-label">RAM</div>
+            <div class="stat-icon purple">💾</div>
+          </div>
+          <div class="stat-value" id="ramVal">-</div>
+          <div class="stat-sub" id="ramSub">-</div>
+          <div class="progress"><div class="progress-fill" id="ramBar" style="background:var(--purple);width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-label">دیسک</div>
+            <div class="stat-icon orange">💿</div>
+          </div>
+          <div class="stat-value" id="diskVal">-</div>
+          <div class="stat-sub" id="diskSub">-</div>
+          <div class="progress"><div class="progress-fill" id="diskBar" style="background:var(--orange);width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-label">ترافیک کل</div>
+            <div class="stat-icon cyan">🌐</div>
+          </div>
+          <div class="stat-value" id="trafficVal">-</div>
+          <div class="stat-sub" id="trafficSub">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-label">آپتایم</div>
+            <div class="stat-icon green">⏱️</div>
+          </div>
+          <div class="stat-value" style="font-size:16px;margin-top:4px" id="uptimeVal">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-top">
+            <div class="stat-label">کاربران فعال</div>
+            <div class="stat-icon green">👥</div>
+          </div>
+          <div class="stat-value">{{ active_count }}</div>
+          <div class="stat-sub">از {{ total_count }} کاربر</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">📈 CPU لحظه‌ای</div>
+          <div class="chart-container"><canvas id="cpuChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">💾 RAM لحظه‌ای</div>
+          <div class="chart-container"><canvas id="ramChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🌐 ترافیک شبکه (KB/s)</div>
+          <div class="chart-container"><canvas id="netChart"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PAGE: Users -->
+    <div class="page" id="page-users">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">➕ افزودن کاربر</div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>نام کاربری</label><input type="text" id="uUsername" placeholder="ali"></div>
+          <div class="field"><label>مدت (روز)</label><input type="number" id="uDays" value="30" min="1"></div>
+          <div class="field"><label>حجم (GB)</label><input type="number" id="uVolume" value="5" min="0.1" step="0.5"></div>
+          <div class="field"><label>یادداشت</label><input type="text" id="uNote" placeholder="اختیاری"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn btn-primary" onclick="addUser()">افزودن</button></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">👤 لیست کاربران ({{ total_count }})</div>
+        </div>
+        <div class="table-wrap">
+          {% if users %}
+          <table>
+            <thead>
+              <tr>
+                <th>کاربر</th><th>وضعیت</th><th>انقضا</th><th>حجم</th><th>ساخته شده</th><th>یادداشت</th><th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u, d in users.items() %}
+              <tr id="row-{{ u }}">
+                <td><strong>{{ u }}</strong></td>
+                <td>
+                  {% if d.active %}<span class="badge badge-active">● فعال</span>
+                  {% else %}<span class="badge badge-inactive">● غیرفعال</span>{% endif %}
+                </td>
+                <td>{{ d.expire_date }}</td>
+                <td>
+                  <div>{{ d.used_gb }}/{{ d.volume_gb }}GB</div>
+                  <div class="vol-bar"><div class="vol-fill" style="width:{{ [[d.used_gb/d.volume_gb*100 if d.volume_gb>0 else 0,0]|max,100]|min }}%"></div></div>
+                </td>
+                <td style="color:var(--muted)">{{ d.created_at }}</td>
+                <td style="color:var(--muted)">{{ d.note or '—' }}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn btn-info btn-sm" onclick="showQR('{{ u }}')">QR</button>
+                    <button class="btn btn-info btn-sm" onclick="showConfig('{{ u }}')">کانفیگ</button>
+                    <button class="btn btn-warning btn-sm" onclick="extendUser('{{ u }}')">تمدید</button>
+                    <button class="btn btn-warning btn-sm" onclick="toggleUser('{{ u }}')">{% if d.active %}غیرفعال{% else %}فعال{% endif %}</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser('{{ u }}')">حذف</button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="empty">هنوز کاربری اضافه نشده</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: Server Config -->
+    <div class="page" id="page-server">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">⚙️ تنظیمات سرور StormDNS</div>
+          <button class="btn btn-success btn-sm" onclick="applyOptimized()">⚡ اعمال تنظیمات بهینه</button>
+        </div>
+        <div class="config-grid" id="configGrid">
+          <div class="config-item">
+            <label>رمزنگاری <span>DATA_ENCRYPTION_METHOD</span></label>
+            <select id="cfg_DATA_ENCRYPTION_METHOD">
+              <option value="0">0 - بدون رمزنگاری</option>
+              <option value="1">1 - XOR (ضعیف)</option>
+              <option value="2" selected>2 - ChaCha20 (توصیه)</option>
+              <option value="3">3 - AES-128-GCM</option>
+              <option value="4">4 - AES-192-GCM</option>
+              <option value="5">5 - AES-256-GCM</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label>UDP Readers <span>UDP_READERS</span></label>
+            <input type="number" id="cfg_UDP_READERS" value="14" min="1" max="64">
+          </div>
+          <div class="config-item">
+            <label>DNS Workers <span>DNS_REQUEST_WORKERS</span></label>
+            <input type="number" id="cfg_DNS_REQUEST_WORKERS" value="14" min="1" max="64">
+          </div>
+          <div class="config-item">
+            <label>Max Requests <span>MAX_CONCURRENT_REQUESTS</span></label>
+            <input type="number" id="cfg_MAX_CONCURRENT_REQUESTS" value="16384" min="1024">
+          </div>
+          <div class="config-item">
+            <label>ARQ Initial RTO <span>ARQ_INITIAL_RTO_SECONDS</span></label>
+            <input type="number" id="cfg_ARQ_INITIAL_RTO_SECONDS" value="0.3" min="0.1" max="5" step="0.1">
+          </div>
+          <div class="config-item">
+            <label>ARQ Max RTO <span>ARQ_MAX_RTO_SECONDS</span></label>
+            <input type="number" id="cfg_ARQ_MAX_RTO_SECONDS" value="2.0" min="0.5" max="10" step="0.1">
+          </div>
+          <div class="config-item">
+            <label>Control Initial RTO <span>ARQ_CONTROL_INITIAL_RTO_SECONDS</span></label>
+            <input type="number" id="cfg_ARQ_CONTROL_INITIAL_RTO_SECONDS" value="0.3" min="0.1" max="5" step="0.1">
+          </div>
+          <div class="config-item">
+            <label>Control Max RTO <span>ARQ_CONTROL_MAX_RTO_SECONDS</span></label>
+            <input type="number" id="cfg_ARQ_CONTROL_MAX_RTO_SECONDS" value="1.5" min="0.5" max="10" step="0.1">
+          </div>
+          <div class="config-item">
+            <label>Max Packets/Batch <span>MAX_PACKETS_PER_BATCH</span></label>
+            <input type="number" id="cfg_MAX_PACKETS_PER_BATCH" value="20" min="1" max="100">
+          </div>
+          <div class="config-item">
+            <label>Control Duplication <span>PACKET_BLOCK_CONTROL_DUPLICATION</span></label>
+            <input type="number" id="cfg_PACKET_BLOCK_CONTROL_DUPLICATION" value="3" min="1" max="10">
+          </div>
+          <div class="config-item">
+            <label>Socket Buffer <span>SOCKET_BUFFER_SIZE</span></label>
+            <input type="number" id="cfg_SOCKET_BUFFER_SIZE" value="8388608" min="1048576">
+          </div>
+          <div class="config-item">
+            <label>ARQ Window <span>ARQ_WINDOW_SIZE</span></label>
+            <input type="number" id="cfg_ARQ_WINDOW_SIZE" value="1000" min="100">
+          </div>
+          <div class="config-item">
+            <label>Session Timeout <span>SESSION_TIMEOUT_SECONDS</span></label>
+            <input type="number" id="cfg_SESSION_TIMEOUT_SECONDS" value="300" min="60">
+          </div>
+          <div class="config-item">
+            <label>Deferred Workers <span>DEFERRED_SESSION_WORKERS</span></label>
+            <input type="number" id="cfg_DEFERRED_SESSION_WORKERS" value="4" min="1" max="32">
+          </div>
+          <div class="config-item">
+            <label>Log Level <span>LOG_LEVEL</span></label>
+            <select id="cfg_LOG_LEVEL">
+              <option value='"DEBUG"'>DEBUG</option>
+              <option value='"INFO"' selected>INFO</option>
+              <option value='"WARN"'>WARN</option>
+              <option value='"ERROR"'>ERROR</option>
+            </select>
+          </div>
+        </div>
+        <div class="config-actions">
+          <button class="btn btn-primary" onclick="saveServerConfig()">💾 ذخیره تنظیمات</button>
+          <button class="btn btn-warning" onclick="loadServerConfig()">🔄 بارگذاری از سرور</button>
+          <button class="btn btn-danger" onclick="restartServer()">⟳ اعمال و ری‌استارت</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: Settings -->
+    <div class="page" id="page-settings">
+      <div class="section">
+        <div class="section-header"><div class="section-title">🔒 امنیت پنل</div></div>
+        <div class="settings-section">
+          <div class="settings-row">
+            <div class="settings-label">
+              <h4>تغییر پسورد ادمین</h4>
+              <p>پسورد فعلی و جدید را وارد کنید</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;width:220px">
+              <input type="password" id="oldPass" placeholder="پسورد فعلی" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Vazirmatn',sans-serif;outline:none;">
+              <input type="password" id="newPass" placeholder="پسورد جدید" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Vazirmatn',sans-serif;outline:none;">
+              <button class="btn btn-primary" onclick="changePassword()">تغییر پسورد</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="overlay" id="qrOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('qrOverlay')">✕</button>
+    <h3>📱 QR Code کانفیگ</h3>
+    <div class="qr-img"><img id="qrImg" src="" alt="QR"></div>
+    <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:10px">با اپ WhiteDNS اسکن کنید</p>
+  </div>
+</div>
+
+<!-- Config Modal -->
+<div class="overlay" id="cfgOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('cfgOverlay')">✕</button>
+    <h3>⚙️ کانفیگ اتصال</h3>
+    <div class="code-box" id="cfgText"></div>
+    <button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="copyText(document.getElementById('cfgText').textContent)">کپی کانفیگ</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ Charts ============
+const chartOpts = (color) => ({
+  responsive:true, maintainAspectRatio:false,
+  animation:{duration:0},
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{display:false},
+    y:{min:0, max:100, display:true,
+       grid:{color:'rgba(255,255,255,0.04)'},
+       ticks:{color:'rgba(255,255,255,0.3)',font:{size:9},callback:v=>v+'%'}}
+  },
+  elements:{point:{radius:0},line:{tension:0.3}}
+});
+
+const netOpts = () => ({
+  responsive:true, maintainAspectRatio:false,
+  animation:{duration:0},
+  plugins:{legend:{display:true,labels:{color:'rgba(255,255,255,0.5)',font:{size:10},boxWidth:10}}},
+  scales:{
+    x:{display:false},
+    y:{display:true, grid:{color:'rgba(255,255,255,0.04)'},
+       ticks:{color:'rgba(255,255,255,0.3)',font:{size:9}}}
+  },
+  elements:{point:{radius:0},line:{tension:0.3}}
+});
+
+const MAX_POINTS = 30;
+const labels = Array(MAX_POINTS).fill('');
+
+function makeDataset(color, label=''){
+  return {label, data:Array(MAX_POINTS).fill(0),
+    borderColor:color, backgroundColor:color+'22',
+    borderWidth:1.5, fill:true};
+}
+
+const cpuChart = new Chart(document.getElementById('cpuChart'), {
+  type:'line', data:{labels:[...labels], datasets:[makeDataset('#3b82f6')]},
+  options: chartOpts('#3b82f6')
+});
+const ramChart = new Chart(document.getElementById('ramChart'), {
+  type:'line', data:{labels:[...labels], datasets:[makeDataset('#8b5cf6')]},
+  options: chartOpts('#8b5cf6')
+});
+const netChart = new Chart(document.getElementById('netChart'), {
+  type:'line',
+  data:{labels:[...labels], datasets:[
+    makeDataset('#10b981','دریافت'), makeDataset('#f59e0b','ارسال')
+  ]},
+  options: netOpts()
+});
+
+function pushData(chart, ...values){
+  values.forEach((v,i) => {
+    chart.data.datasets[i].data.push(v);
+    if(chart.data.datasets[i].data.length > MAX_POINTS)
+      chart.data.datasets[i].data.shift();
+  });
+  chart.data.labels.push('');
+  if(chart.data.labels.length > MAX_POINTS) chart.data.labels.shift();
+  chart.update();
+}
+
+// ============ Stats polling ============
+async function fetchStats(){
+  try{
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    document.getElementById('cpuVal').textContent = d.cpu+'%';
+    document.getElementById('cpuBar').style.width = d.cpu+'%';
+    document.getElementById('ramVal').textContent = d.mem_percent+'%';
+    document.getElementById('ramSub').textContent = d.mem_used+' / '+d.mem_total+' GB';
+    document.getElementById('ramBar').style.width = d.mem_percent+'%';
+    document.getElementById('diskVal').textContent = d.disk_percent+'%';
+    document.getElementById('diskSub').textContent = d.disk_used+' / '+d.disk_total+' GB';
+    document.getElementById('diskBar').style.width = d.disk_percent+'%';
+    document.getElementById('uptimeVal').textContent = d.uptime;
+    pushData(cpuChart, d.cpu);
+    pushData(ramChart, d.mem_percent);
+    pushData(netChart, d.net_in_kb, d.net_out_kb);
+    // Fix net chart scale
+    const maxNet = Math.max(...netChart.data.datasets[0].data, ...netChart.data.datasets[1].data, 10);
+    netChart.options.scales.y.max = Math.ceil(maxNet * 1.2);
+    netChart.options.scales.y.ticks.callback = v => v+' KB';
+  }catch(e){}
+}
+
+async function fetchTraffic(){
+  try{
+    const r = await fetch('/api/traffic');
+    const d = await r.json();
+    document.getElementById('trafficVal').textContent = d.total_gb+' GB';
+    document.getElementById('trafficSub').textContent = '↓'+d.rx_gb+' ↑'+d.tx_gb+' GB';
+  }catch(e){}
+}
+
+async function checkServer(){
+  try{
+    const r = await fetch('/api/server_status');
+    const d = await r.json();
+    const el = document.getElementById('serverBadge');
+    if(d.running){
+      el.className = 'server-badge active';
+      el.innerHTML = '<div class="dot"></div><span>سرور فعال</span>';
+    } else {
+      el.className = 'server-badge inactive';
+      el.innerHTML = '<div class="dot" style="animation:none"></div><span>سرور خاموش</span>';
+    }
+  }catch(e){}
+}
+
+fetchStats(); fetchTraffic(); checkServer();
+setInterval(fetchStats, 2000);
+setInterval(fetchTraffic, 30000);
+setInterval(checkServer, 15000);
+
+// ============ Navigation ============
+const pageTitles = {dashboard:'داشبورد',users:'کاربران',server:'تنظیمات سرور',settings:'امنیت پنل'};
+function showPage(id, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('pageTitle').textContent = pageTitles[id];
+  if(id==='server') loadServerConfig();
+}
+
+// ============ Users ============
+async function addUser(){
+  const username=document.getElementById('uUsername').value.trim();
+  const days=document.getElementById('uDays').value;
+  const volume_gb=document.getElementById('uVolume').value;
+  const note=document.getElementById('uNote').value;
+  if(!username){toast('نام کاربری را وارد کنید','err');return;}
+  const r=await fetch('/api/add_user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,days,volume_gb,note})});
+  const d=await r.json();
+  if(d.success){toast(d.message,'ok');setTimeout(()=>location.reload(),900);}
+  else toast(d.error,'err');
+}
+
+async function deleteUser(u){
+  if(!confirm(`کاربر ${u} حذف شود؟`))return;
+  const r=await fetch(`/api/delete_user/${u}`,{method:'DELETE'});
+  const d=await r.json();
+  if(d.success){toast('کاربر حذف شد','ok');document.getElementById('row-'+u).remove();}
+  else toast(d.error,'err');
+}
+
+async function toggleUser(u){
+  const r=await fetch(`/api/toggle_user/${u}`,{method:'POST'});
+  const d=await r.json();
+  if(d.success){toast('وضعیت تغییر کرد','ok');setTimeout(()=>location.reload(),800);}
+  else toast(d.error,'err');
+}
+
+async function extendUser(u){
+  const days=prompt('چند روز تمدید؟','30');
+  if(!days)return;
+  const r=await fetch(`/api/extend_user/${u}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:parseInt(days)})});
+  const d=await r.json();
+  if(d.success){toast(`تمدید شد تا ${d.new_expire}`,'ok');setTimeout(()=>location.reload(),1000);}
+  else toast(d.error,'err');
+}
+
+function showQR(u){
+  document.getElementById('qrImg').src=`/api/qrcode/${u}?t=${Date.now()}`;
+  document.getElementById('qrOverlay').classList.add('show');
+}
+
+async function showConfig(u){
+  const r=await fetch(`/api/config/${u}`);
+  const d=await r.json();
+  document.getElementById('cfgText').textContent=d.config;
+  document.getElementById('cfgOverlay').classList.add('show');
+}
+
+// ============ Server Config ============
+async function loadServerConfig(){
+  try{
+    const r=await fetch('/api/server_config');
+    const d=await r.json();
+    for(const [k,v] of Object.entries(d)){
+      const el=document.getElementById('cfg_'+k);
+      if(el) el.value=v.replace(/"/g,'');
+    }
+  }catch(e){}
+}
+
+async function saveServerConfig(){
+  const keys=['DATA_ENCRYPTION_METHOD','UDP_READERS','DNS_REQUEST_WORKERS','MAX_CONCURRENT_REQUESTS',
+    'ARQ_INITIAL_RTO_SECONDS','ARQ_MAX_RTO_SECONDS','ARQ_CONTROL_INITIAL_RTO_SECONDS','ARQ_CONTROL_MAX_RTO_SECONDS',
+    'MAX_PACKETS_PER_BATCH','PACKET_BLOCK_CONTROL_DUPLICATION','SOCKET_BUFFER_SIZE',
+    'SESSION_TIMEOUT_SECONDS','ARQ_WINDOW_SIZE','DEFERRED_SESSION_WORKERS','LOG_LEVEL'];
+  const data={};
+  keys.forEach(k=>{
+    const el=document.getElementById('cfg_'+k);
+    if(el){
+      let v=el.value;
+      if(k==='LOG_LEVEL') v=`"${v.replace(/"/g,'')}"`;
+      data[k]=v;
+    }
+  });
+  const r=await fetch('/api/server_config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  const d=await r.json();
+  if(d.success) toast(d.message,'ok');
+  else toast(d.error,'err');
+}
+
+async function applyOptimized(){
+  const r=await fetch('/api/apply_optimized',{method:'POST'});
+  const d=await r.json();
+  if(d.success){toast(d.message,'ok');loadServerConfig();}
+  else toast(d.error,'err');
+}
+
+async function restartServer(){
+  if(!confirm('سرور StormDNS ری‌استارت شود؟'))return;
+  await fetch('/api/restart_server',{method:'POST'});
+  toast('سرور ری‌استارت شد','ok');
+  setTimeout(checkServer,3000);
+}
+
+// ============ Settings ============
+async function changePassword(){
+  const old_password=document.getElementById('oldPass').value;
+  const new_password=document.getElementById('newPass').value;
+  if(!old_password||!new_password){toast('هر دو فیلد را پر کنید','err');return;}
+  if(new_password.length<6){toast('پسورد جدید حداقل ۶ کاراکتر باشد','err');return;}
+  const r=await fetch('/api/change_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old_password,new_password})});
+  const d=await r.json();
+  if(d.success){toast('پسورد تغییر کرد','ok');document.getElementById('oldPass').value='';document.getElementById('newPass').value='';}
+  else toast(d.error,'err');
+}
+
+// ============ Utils ============
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('show');}));
+
+function copyText(t){navigator.clipboard.writeText(t);toast('کپی شد','ok');}
+
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className=`toast ${type} show`;
+  setTimeout(()=>el.className='toast',3000);
+}
+</script>
+</body>
+</html>
